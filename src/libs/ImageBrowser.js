@@ -40,8 +40,8 @@ class ImageBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  constructor(assets, options) {
-    super();
+  constructor(assets, options = {}) {
+    super(options);
     this.assets = assets;
     this.type = options.type || "image";
     this.callback = options.callback;
@@ -77,7 +77,6 @@ class ImageBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       subtitle: "",
     },
     form: {
-      handler: ImageBrowser.formHandler,
       submitOnChange: false,
       closeOnSubmit: false,
     },
@@ -85,7 +84,8 @@ class ImageBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _prepareContext() {
     let idx = 0;
-    const assets = await Promise.all(this.assets.map(async (asset) => {
+    const initialAssets = (this.assets || []).slice(0, ImageBrowser.MAX_ASSETS);
+    const assets = await Promise.all(initialAssets.map(async (asset) => {
       const uri = await ImageBrowser.getFileUrl(asset.key, false);
       const result = { uri, label: asset.label, idx };
       idx++;
@@ -100,8 +100,8 @@ class ImageBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     };
   }
 
-  _onRender() {
-    this.bringToTop();
+  _onRender(_context, _options) {
+    this.bringToFront();
     const listEl = this.element.querySelector(".list");
     if (listEl) {
       listEl.addEventListener("scroll", this._onScroll.bind(this));
@@ -147,7 +147,7 @@ class ImageBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     if (bottom - 20 < height) {
       this.ignoreScroll = true;
       if (
-        this.assetInc * ImageBrowser.MAX_ASSETS
+        (this.assetInc + 1) * ImageBrowser.MAX_ASSETS
         < this.assets.length
       ) {
         this.assetInc++;
