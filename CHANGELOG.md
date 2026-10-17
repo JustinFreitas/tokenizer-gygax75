@@ -1,5 +1,14 @@
 # Changelog
 
+# [5.0.3-gygax75.1]
+
+- Fix `bringToFront()` for Foundry V14 ApplicationV2 compatibility in `ImageBrowser` (replaces deprecated V1 `bringToTop()`).
+- Forward constructor options to `super(options)` in `ImageBrowser`.
+- Remove dead `ImageBrowser.formHandler` reference in `DEFAULT_OPTIONS.form`.
+- Slice initial assets in `ImageBrowser._prepareContext()` to `MAX_ASSETS` to prevent infinite scroll duplicate item appends.
+- Align `ImageBrowser._onRender` signature with ApplicationV2 lifecycle.
+- Update verified compatibility to Foundry V14.
+
 # [5.0.3]
 
 - Save location box would not save.
