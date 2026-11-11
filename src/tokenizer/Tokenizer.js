@@ -19,7 +19,10 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
       ["v2", "v3", "v4", "v7", "v12"].forEach((v) => {
         for (let i = 1; i <= 8; i++) {
           const fileName = `modules/vtta-tokenizer/img/omfg/${version}/${v}/OMFG_Tokenizer_${v}_0${i}.png`;
-          const label = `OMFG ${game.i18n.localize("vtta-tokenizer.label.Frame")} ${v} 0${i}`;
+          const versionSuffix = version === "desaturated"
+            ? ` (${game.i18n.localize("vtta-tokenizer.label.Desaturated")})`
+            : "";
+          const label = `OMFG ${game.i18n.localize("vtta-tokenizer.label.Frame")} ${v} 0${i}${versionSuffix}`;
           const obj = {
             key: fileName,
             label,
@@ -339,7 +342,7 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
       height: "auto",
     },
     window: {
-      title: "Tokenizer",
+      title: "vtta-tokenizer.module-name",
     },
   };
 
@@ -349,7 +352,7 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
     const frames = await this.getFrames();
     const masks = await this.getMasks();
     const pasteTarget = game.settings.get(CONSTANTS.MODULE_ID, "paste-target") ?? "token";
-    const pasteTargetName = Utils.titleString(pasteTarget);
+    const pasteTargetName = game.i18n.localize(`vtta-tokenizer.label.${pasteTarget}`);
 
     return {
       options: this.tokenOptions,
@@ -386,7 +389,7 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
       },
     });
 
-    fp.render(true);
+    fp.render({ force: true });
   }
 
   getWildCardPath() {
@@ -416,16 +419,18 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
     if (suffix === "Token" && this.tokenOptions.isWildCard) {
       // for wildcards we respect the current path of the existing/provided tokenpath
       const dirOptions = DirectoryPicker.parse(this.wildCardPath);
-      const tokenWildcard = this.tokenOptions.tokenFilename.indexOf("*") === -1
+      const tokenFilename = DirectoryPicker.decodePath(this.tokenOptions.tokenFilename ?? "", dirOptions.activeSource);
+      const tokenWildcard = tokenFilename.indexOf("*") === -1
         // set it to a wildcard we can actually use
         ? `${dirOptions.current}/${actorName}.Token-*.${this.imageFormat}`
-        : this.tokenOptions.tokenFilename.endsWith(`.${this.imageFormat}`)
-          ? this.tokenOptions.tokenFilename
-          : `${this.tokenOptions.tokenFilename}.${this.imageFormat}`;
+        : tokenFilename.endsWith(`.${this.imageFormat}`)
+          ? tokenFilename
+          : `${tokenFilename}.${this.imageFormat}`;
 
       const FPClass = foundry.applications.apps.FilePicker.implementation;
       const browser = await FPClass.browse(dirOptions.activeSource, tokenWildcard, {
         wildcard: true,
+        bucket: dirOptions.bucket,
       });
 
       const newCount = browser.files.length + 1;
@@ -460,7 +465,7 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
     const dataResults = await Promise.all([this.Avatar.get("blob"), this.Token.get("blob")]);
     await this.updateAvatar(dataResults[0]);
     await this.updateToken(dataResults[1]);
-    this.callback(this.tokenOptions);
+    await this.callback(this.tokenOptions);
   }
 
   closeQuickLayerSelector(type) {
@@ -519,8 +524,62 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
     });
   }
 
+  _bindWindowListeners() {
+    this._unbindWindowListeners();
+    if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
+    this._onWindowPaste = (e) => {
+      game.canvas.layers.forEach((layer) => {
+        layer._copy = [];
+      });
+      e.stopPropagation();
+      this.pasteImage(e);
+    };
+    this._onWindowDrop = (e) => {
+      e.stopPropagation();
+      this.pasteImage(e);
+    };
+    window.addEventListener("paste", this._onWindowPaste);
+    window.addEventListener("drop", this._onWindowDrop);
+  }
+
+  _unbindWindowListeners() {
+    if (typeof window === "undefined" || typeof window.removeEventListener !== "function") return;
+    if (this._onWindowPaste) {
+      window.removeEventListener("paste", this._onWindowPaste);
+      this._onWindowPaste = null;
+    }
+    if (this._onWindowDrop) {
+      window.removeEventListener("drop", this._onWindowDrop);
+      this._onWindowDrop = null;
+    }
+  }
+
   _onRender() {
+    this._bindWindowListeners();
+    if (this.element && !this.element.dataset?.tokenizerMousedownBound) {
+      if (this.element.dataset) this.element.dataset.tokenizerMousedownBound = "true";
+      this.element.addEventListener("mousedown", (e) => {
+        // this handles clearing of the selector pop ups when a non popup is clicked
+        if (!this.activeLayerSelectorElement) return;
+        if (
+          !this.activeLayerSelectorElement.contains(e.target)
+          && !this.lastControlButtonClicked?.contains(e.target)
+        ) {
+          e.preventDefault();
+          this.activeLayerSelectorElement.classList.remove("show");
+          this.activeLayerSelectorElement = null;
+          this.lastControlButtonClicked = null;
+        }
+      }, false);
+    }
     this.loadImages();
+  }
+
+  async _onClose(options) {
+    this._unbindWindowListeners();
+    if (typeof super._onClose === "function") {
+      await super._onClose(options);
+    }
   }
 
   static async filePickerThumbs(event, target) {
@@ -685,7 +744,12 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
       }
       case "download": {
         const result = await foundry.applications.api.DialogV2.prompt({
-          window: { title: "Download from the internet" },
+          classes: ["ose", "dialog"],
+          position: {
+            width: 400,
+            height: "auto",
+          },
+          window: { title: "vtta-tokenizer.download.title" },
           content: `
             <p>${game.i18n.localize("vtta-tokenizer.download.url")}.</p>
             <div class="form-group">
@@ -694,7 +758,7 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
             </div>`,
           ok: {
             label: game.i18n.localize("vtta-tokenizer.label.OK"),
-            callback: (event, button) => {
+            callback: (_event, button) => {
               return button.form.elements.tokenizerurl.value;
             },
           },
@@ -950,29 +1014,3 @@ export default class Tokenizer extends HandlebarsApplicationMixin(ApplicationV2)
   }
 
 }
-
-Hooks.on("renderTokenizer", (app) => {
-  window.addEventListener("paste", async (e) => {
-    game.canvas.layers.forEach((layer) => {
-      layer._copy = [];
-    });
-    e.stopPropagation();
-    app.pasteImage(e);
-  });
-  window.addEventListener("drop", async (e) => {
-    e.stopPropagation();
-    app.pasteImage(e);
-  });
-  app.element.addEventListener("mousedown", async (e) => {
-    // this handles clearing if the selector pop ups when a non popup is clicked
-    if (!app.activeLayerSelectorElement) return;
-    if (!app.activeLayerSelectorElement.contains(e.target)
-     && !app.lastControlButtonClicked.contains(e.target)
-    ) {
-      e.preventDefault();
-      app.activeLayerSelectorElement.classList.remove("show");
-      app.activeLayerSelectorElement = null;
-      app.lastControlButtonClicked = null;
-    }
-  }, false);
-});

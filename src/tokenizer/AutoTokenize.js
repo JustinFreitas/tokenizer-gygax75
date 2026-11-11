@@ -20,15 +20,16 @@ export default class AutoTokenize extends HandlebarsApplicationMixin(Application
 
   static DEFAULT_OPTIONS = {
     id: "auto-tokenize",
-    classes: ["tokenizer"],
+    classes: ["ose", "dialog", "tokenizer"],
     actions: {
       startTokenize: AutoTokenize.startTokenize,
     },
     position: {
       width: 350,
+      height: "auto",
     },
     window: {
-      title: "Auto Tokenize",
+      title: "vtta-tokenizer.compendium.auto-tokenize",
     },
   };
 
@@ -45,14 +46,18 @@ export default class AutoTokenize extends HandlebarsApplicationMixin(Application
   }
 
   static _renderCompleteDialog(title, content) {
-    foundry.applications.api.DialogV2.prompt({
+    return foundry.applications.api.DialogV2.prompt({
+      classes: ["ose", "dialog", "auto-complete"],
+      position: {
+        width: 400,
+        height: "auto",
+      },
       window: {
         title,
-        classes: ["dialog", "auto-complete"],
       },
       content: `<h1>${content.title}</h1><h3>${content.description}</h3>`,
       ok: {
-        label: "OK",
+        label: game.i18n.localize("vtta-tokenizer.label.OK"),
       },
     });
   }

@@ -86,7 +86,7 @@ function adjustScaling(tokenData) {
     // if the user has set the scaling to be reset, we do that
     tokenData.texture.scaleX = 1;
     tokenData.texture.scaleY = 1;
-    tokenData.texture.offsetY = 0;
+    tokenData.texture.offsetX = 0;
     tokenData.texture.offsetY = 0;
     tokenData.texture.rotation = 0;
     tokenData.texture.anchorX = 0.5;
@@ -102,31 +102,25 @@ async function updateActor(tokenizerResponse) {
   // updating the avatar filename
   const update = {};
   const avatarKey = getAvatarKey();
-  update[avatarKey] = tokenizerResponse.avatarFilename.split("?")[0] + "?" + dateTag;
+  if (typeof tokenizerResponse.avatarFilename === "string" && tokenizerResponse.avatarFilename.trim() !== "") {
+    update[avatarKey] = tokenizerResponse.avatarFilename.split("?")[0] + "?" + dateTag;
+  }
 
-  if (!tokenizerResponse.isWildCard) {
+  if (
+    !tokenizerResponse.isWildCard
+    && typeof tokenizerResponse.tokenFilename === "string"
+    && tokenizerResponse.tokenFilename.trim() !== ""
+  ) {
     // for non-wildcard tokens, we set the token img now
     const tokenPath = tokenizerResponse.tokenFilename.split("?")[0] + "?" + dateTag;
     foundry.utils.setProperty(update, "prototypeToken.texture.src", tokenPath);
     foundry.utils.setProperty(update, "prototypeToken.randomImg", false);
     updateDynamicRingData(update.prototypeToken, tokenPath, { forceRing: tokenizerResponse.forceDynamicRing });
     adjustScaling(update.prototypeToken);
-  } 
-  // else if (tokenizerResponse.actor.prototypeToken.texture.src.indexOf("*") === -1) {
-  //   // if it is a wildcard and it isn't set like one, we change that
-  //   const actorName = tokenizerResponse.actor.name.replace(/[^\w.]/gi, "_").replace(/__+/g, "");
-  //   const options = DirectoryPicker.parse(tokenizerResponse.tokenUploadDirectory);
-
-  //   // set it to a wildcard we can actually use
-  //   const imageFormat = game.settings.get(CONSTANTS.MODULE_ID, "image-save-type");
-  //   const message = game.i18n.format("vtta-tokenizer.notification.wildcard", { path: tokenizerResponse.actor.prototypeToken.texture.src });
-  //   ui.notifications.info(message);
-  //   update.token = {
-  //     img: `${options.current}/${actorName}.Token-*.${imageFormat}`,
-  //   };
-  // }
+  }
 
   logger.debug("Updating with", update);
+  if (Object.keys(update).length === 0) return;
   await tokenizerResponse.actor.update(update);
   if (!update.prototypeToken) return;
   // if there is a scene token, lets update it
@@ -230,8 +224,7 @@ function tokenizeDocV2() {
   const doc = this.document;
 
   if (doc.token) {
-    // eslint-disable-next-line no-invalid-this
-    tokenizeSceneTokenV2(this.actor);
+    tokenizeSceneTokenV2(doc);
   } else {
     tokenizeActor(doc);
   }
@@ -327,7 +320,7 @@ function getActorSheetHeaderButtons(app, buttons) {
   const doc = (app.token) ? app : app.document;
 
   buttons.unshift({
-    label: "Tokenizer",
+    label: game.i18n.localize("vtta-tokenizer.module-name"),
     icon: "far fa-user-circle",
     class: CONSTANTS.MODULE_ID,
     onclick: () => tokenizeDoc(doc),
@@ -345,9 +338,12 @@ function getActorSheetHeaderButtonsV2(config, buttons) {
     return;
   }
 
+  const titleLink = game.settings.get(CONSTANTS.MODULE_ID, "title-link");
+  if (!titleLink) return;
+
   config.options.actions["tokenizer"] = tokenizeDocV2;
   buttons.push({
-    label: "Tokenizer",
+    label: game.i18n.localize("vtta-tokenizer.module-name"),
     icon: "far fa-user-circle",
     action: "tokenizer",
   });
@@ -387,26 +383,27 @@ function linkDefaultSheets() {
     Hooks.on("render" + sheetName, (app, html, _data) => {
       if (!game.user) return;
       const dataEditField = getAvatarKey();
-      const key = html[0] instanceof HTMLDivElement || html[0] instanceof HTMLFormElement
-        ? html[0]
-        : html;
+      const key = html?.querySelector ? html : html?.[0];
+      if (!key?.querySelector) return;
 
       const element = key.querySelector(`[data-edit="${dataEditField}"], [data-edit="prototypeToken.texture.src"]`);
-      if (!element) return;
+      if (!element || element.dataset.tokenizerBound === "true") return;
+      element.dataset.tokenizerBound = "true";
 
       const doc = (app.token) ? app : app.document;
-      const disableAvatarClickGlobal = game.settings.get(CONSTANTS.MODULE_ID, "disable-avatar-click");
-      const disableAvatarClickUser = game.settings.get(CONSTANTS.MODULE_ID, "disable-avatar-click-user");
-      const disableAvatarClick = disableAvatarClickUser === "global"
-        ? disableAvatarClickGlobal
-        : disableAvatarClickUser === "default";
 
-      element.addEventListener('click', (event) => {
-        const launchTokenizer
+      element.addEventListener("click", (event) => {
+        const disableAvatarClickGlobal = game.settings.get(CONSTANTS.MODULE_ID, "disable-avatar-click");
+        const disableAvatarClickUser = game.settings.get(CONSTANTS.MODULE_ID, "disable-avatar-click-user");
+        const disableAvatarClick = disableAvatarClickUser === "global"
+          ? disableAvatarClickGlobal
+          : disableAvatarClickUser === "default";
+
+        const shouldLaunch
           = (!disableAvatarClick && !event.shiftKey) // avatar click not disabled, and not shift key
           || (disableAvatarClick && event.shiftKey); // avatar click disabled, and shift key
 
-        if (launchTokenizer) {
+        if (shouldLaunch) {
           event.preventDefault();
           event.stopPropagation();
           event.stopImmediatePropagation();
@@ -508,7 +505,7 @@ function addTokenizerContentOption(contextOptions) {
   }
 
   contextOptions.push({
-    name: "Tokenizer",
+    name: "vtta-tokenizer.module-name",
     callback: (li) => {
       const docId = li.dataset?.entryId
         ?? li.dataset?.documentId
@@ -539,24 +536,15 @@ export function ready() {
   exposeAPI();
 }
 
-Hooks.on('getActorDirectoryEntryContext', (html, contextOptions) => {
-  addTokenizerContentOption(contextOptions);
-  addUpdateSceneTokensContext(contextOptions);
-});
-
-Hooks.on("getCompendiumDirectoryEntryContext", (html, contextOptions) => {
-  addCompendiumContextOptions(contextOptions);
-});
-
-Hooks.on('getActorSheetHeaderButtons', getActorSheetHeaderButtons);
+Hooks.on("getActorSheetHeaderButtons", getActorSheetHeaderButtons);
 Hooks.on("getHeaderControlsApplicationV2", getActorSheetHeaderButtonsV2);
 
-// v13 hooks for context menus
-Hooks.once('getActorContextOptions', (html, contextOptions) => {
+// Foundry V13/V14 context menu hooks
+Hooks.on("getActorContextOptions", (_html, contextOptions) => {
   addTokenizerContentOption(contextOptions);
   addUpdateSceneTokensContext(contextOptions);
 });
 
-Hooks.once("getCompendiumContextOptions", (html, contextOptions) => {
+Hooks.on("getCompendiumContextOptions", (_html, contextOptions) => {
   addCompendiumContextOptions(contextOptions);
 });

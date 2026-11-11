@@ -71,7 +71,7 @@ class ImageBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
     },
     tag: "form",
     window: {
-      title: "Image Browser",
+      title: "vtta-tokenizer.label.ImageBrowser",
       resizable: true,
       minimizable: false,
       subtitle: "",
@@ -129,12 +129,13 @@ class ImageBrowser extends HandlebarsApplicationMixin(ApplicationV2) {
       current: dir.current,
       options: { bucket: dir.bucket },
       callback: (imagePath, fPicker) => {
-        const formattedPath = fPicker.result.bucket
-          ? `[${fPicker.activeSource}:${fPicker.result.bucket}] ${imagePath}`
+        const bucket = fPicker.result?.bucket ?? (fPicker.activeSource === "s3" ? fPicker.sources?.s3?.bucket : null);
+        const formattedPath = bucket
+          ? `[${fPicker.activeSource}:${bucket}] ${imagePath}`
           : `[${fPicker.activeSource}] ${imagePath}`;
         this.callback(formattedPath);
       },
-    }).render();
+    }).render({ force: true });
     this.close();
   }
 

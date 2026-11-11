@@ -1,5 +1,16 @@
 # Changelog
 
+# [5.0.3-gygax75.2]
+
+- Remove leaked global `window` `paste` and `drop` event listeners in `Tokenizer._onClose()` so Foundry canvas token copy-paste works normally after closing Tokenizer.
+- Cherry-pick upstream PR #236: validate `FilePicker.upload()` responses, decode percent-encoded local paths once without breaking S3/Forge/URLs, fix `DirectoryPicker.verifyPath()` / `TokenizerSaveLocations` directory validation & picker options, guard `updateActor` against empty filenames, `await callback` in `Tokenizer.formHandler`, fix `${packName}` i18n placeholder, and add Russian (`ru`) localization.
+- Ensure all `DialogV2` and `ApplicationV2` dialogs (`AutoTokenize`, `Tokenizer` URL prompt, `TokenizerSaveLocations`, `ResetCustomFrames`, `ResetCustomMasks`, `QuickSettings`) include `classes: ["ose", "dialog"]` and explicit `position` dimensions.
+- Fix `getActorContextOptions` and `getCompendiumContextOptions` registration (`Hooks.on` instead of `Hooks.once`) and remove dead V12 context hooks.
+- Migrate 6 image settings in `src/settings.js` from legacy V1 `ImagePicker.Img` to native Foundry V14 `type: String, filePicker: "image"`.
+- Fix `ImageBrowser.openFilePicker` crash when `fPicker.result` is undefined in Foundry V14 (`fPicker.result?.bucket`) and migrate `fp.render(true)` to `fp.render({ force: true })`.
+- Respect `title-link` setting and `doc` binding in `getActorSheetHeaderButtonsV2` / `tokenizeDocV2`, prevent duplicate avatar click listener binding on partial V2 sheet re-renders, fix `QuickSettings` debounced reload execution, fix `adjustScaling` `offsetX = 0`, remove bogus folder-picker button next to filename inputs in `save-locations/form.hbs`, and distinguish desaturated OMFG frame labels.
+- Add automated regression test suite (`tests/regressions.cjs`) and modernize GitHub Actions workflows for Node 24.
+
 # [5.0.3-gygax75.1]
 
 - Fix `bringToFront()` for Foundry V14 ApplicationV2 compatibility in `ImageBrowser` (replaces deprecated V1 `bringToTop()`).

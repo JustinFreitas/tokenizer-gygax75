@@ -1,4 +1,4 @@
-import ImagePicker from "./libs/ImagePicker.js";
+import "./libs/ImagePicker.js";
 import logger from "./libs/logger.js";
 import CONSTANTS from "./constants.js";
 
@@ -14,6 +14,11 @@ class ResetCustomFrames extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
     id: "cleanup-custom-frames",
+    classes: ["ose", "dialog"],
+    position: {
+      width: 400,
+      height: "auto",
+    },
     tag: "form",
     form: {
       handler: ResetCustomFrames.formHandler,
@@ -21,7 +26,7 @@ class ResetCustomFrames extends HandlebarsApplicationMixin(ApplicationV2) {
       closeOnSubmit: true,
     },
     window: {
-      title: "Reset Custom Frames",
+      title: "vtta-tokenizer.reset-custom-frames.name",
     },
   };
 
@@ -51,6 +56,11 @@ class ResetCustomMasks extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
     id: "cleanup-custom-masks",
+    classes: ["ose", "dialog"],
+    position: {
+      width: 400,
+      height: "auto",
+    },
     tag: "form",
     form: {
       handler: ResetCustomMasks.formHandler,
@@ -58,7 +68,7 @@ class ResetCustomMasks extends HandlebarsApplicationMixin(ApplicationV2) {
       closeOnSubmit: true,
     },
     window: {
-      title: "Reset Custom Masks",
+      title: "vtta-tokenizer.reset-custom-masks.name",
     },
   };
 
@@ -88,6 +98,11 @@ class QuickSettings extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static DEFAULT_OPTIONS = {
     id: "quick-settings",
+    classes: ["ose", "dialog"],
+    position: {
+      width: 450,
+      height: "auto",
+    },
     actions: {
       applyPreset: QuickSettings.applyPreset,
     },
@@ -185,7 +200,7 @@ class QuickSettings extends HandlebarsApplicationMixin(ApplicationV2) {
       }
       // no default
     }
-    foundry.utils.debounce(window.location.reload(), 100);
+    foundry.utils.debounce(() => window.location.reload(), 100)();
   }
 }
 
@@ -307,7 +322,8 @@ export function registerSettings() {
   game.settings.register(CONSTANTS.MODULE_ID, "default-frame-pc", {
     name: `${CONSTANTS.MODULE_ID}.default-frame-pc.name`,
     hint: `${CONSTANTS.MODULE_ID}.default-frame-pc.hint`,
-    type: ImagePicker.Img,
+    type: String,
+    filePicker: "image",
     default: `[data] ${CONSTANTS.PATH}img/default-frame-pc.png`,
     scope: "world",
     config: true,
@@ -316,7 +332,8 @@ export function registerSettings() {
   game.settings.register(CONSTANTS.MODULE_ID, "default-frame-npc", {
     name: `${CONSTANTS.MODULE_ID}.default-frame-npc.name`,
     hint: `${CONSTANTS.MODULE_ID}.default-frame-npc.hint`,
-    type: ImagePicker.Img,
+    type: String,
+    filePicker: "image",
     default: `[data] ${CONSTANTS.PATH}img/default-frame-npc.png`,
     scope: "world",
     config: true,
@@ -325,7 +342,8 @@ export function registerSettings() {
   game.settings.register(CONSTANTS.MODULE_ID, "default-frame-neutral", {
     name: `${CONSTANTS.MODULE_ID}.default-frame-neutral.name`,
     hint: `${CONSTANTS.MODULE_ID}.default-frame-neutral.hint`,
-    type: ImagePicker.Img,
+    type: String,
+    filePicker: "image",
     default: `[data] ${CONSTANTS.PATH}img/default-frame-npc.png`,
     scope: "world",
     config: true,
@@ -353,7 +371,8 @@ export function registerSettings() {
   game.settings.register(CONSTANTS.MODULE_ID, "default-frame-tint", {
     name: `${CONSTANTS.MODULE_ID}.default-frame-tint.name`,
     hint: `${CONSTANTS.MODULE_ID}.default-frame-tint.hint`,
-    type: ImagePicker.Img,
+    type: String,
+    filePicker: "image",
     default: `[data] ${CONSTANTS.PATH}img/plain-marble-frame-grey.png`,
     scope: "world",
     config: true,
@@ -467,7 +486,8 @@ export function registerSettings() {
     name: `${CONSTANTS.MODULE_ID}.default-texture-layer.name`,
     scope: "world",
     config: true,
-    type: ImagePicker.Img,
+    type: String,
+    filePicker: "image",
     default: `[data] ${CONSTANTS.PATH}img/grey-texture.webp`,
   });
 
@@ -504,7 +524,8 @@ export function registerSettings() {
     name: `${CONSTANTS.MODULE_ID}.default-mask-layer.name`,
     scope: "world",
     config: true,
-    type: ImagePicker.Img,
+    type: String,
+    filePicker: "image",
     default: `[data] ${CONSTANTS.PATH}img/dynamic-ring-circle-mask.webp`,
   });
 
@@ -545,9 +566,9 @@ export function registerSettings() {
     config: true,
     type: String,
     choices: {
-      global: "Use global setting",
-      tokenizer: "Tokenizer",
-      default: "Default File Picker",
+      global: "vtta-tokenizer.choice.global",
+      tokenizer: "vtta-tokenizer.module-name",
+      default: "vtta-tokenizer.choice.filePicker",
     },
     default: "global",
   });
@@ -614,11 +635,11 @@ export function registerSettings() {
     config: true,
     type: String,
     choices: {
-      DEBUG: "DEBUG",
-      INFO: "INFO",
-      WARN: "WARN",
-      ERR: "ERROR ",
-      OFF: "OFF",
+      DEBUG: "vtta-tokenizer.log-level.DEBUG",
+      INFO: "vtta-tokenizer.log-level.INFO",
+      WARN: "vtta-tokenizer.log-level.WARN",
+      ERR: "vtta-tokenizer.log-level.ERR",
+      OFF: "vtta-tokenizer.log-level.OFF",
     },
     default: "INFO",
   });

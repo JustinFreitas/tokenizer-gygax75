@@ -188,6 +188,14 @@ export default class Utils {
     const FPClass = foundry.applications.apps.FilePicker.implementation;
     const result = await FPClass.upload(options.activeSource, options.current, file, { bucket: options.bucket }, { notify: false });
 
+    if (result?.error || typeof result?.path !== "string" || result.path.trim() === "") {
+      const message = game.i18n.format("vtta-tokenizer.notification.failedUpload", {
+        fileName,
+        directory: options.current,
+      });
+      ui.notifications.error(message);
+      throw new Error(message);
+    }
     return result.path;
   }
 
@@ -273,7 +281,7 @@ export default class Utils {
   static extractImage(event, view) {
     const evData = event?.clipboardData || event?.dataTransfer;
 
-    if (!evData.items) return;
+    if (!evData?.items) return;
 
     for (const item of evData.items) {
       if (item.type.startsWith('image')) {
